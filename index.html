@@ -1,0 +1,1536 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>期货多账户仓位管理系统 - 局域网版</title>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f0f2f5;
+            color: #333;
+            line-height: 1.6;
+            padding-bottom: 80px;
+        }
+        .header {
+            background: linear-gradient(135deg, #1a73e8 0%, #0d47a1 100%);
+            color: white;
+            padding: 16px;
+            text-align: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        }
+        .header h1 { font-size: 17px; font-weight: 600; }
+        .header p { font-size: 11px; opacity: 0.8; margin-top: 2px; }
+        .server-info {
+            background: rgba(255,255,255,0.15);
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+            margin-top: 6px;
+            display: inline-block;
+        }
+        .container { padding: 10px; max-width: 600px; margin: 0 auto; }
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 14px;
+            margin-bottom: 10px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+        }
+        .card-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #1a73e8;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .card-title::before {
+            content: '';
+            display: inline-block;
+            width: 3px;
+            height: 14px;
+            background: #1a73e8;
+            border-radius: 2px;
+        }
+        .input-group {
+            margin-bottom: 10px;
+        }
+        .input-group label {
+            display: block;
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 3px;
+            font-weight: 500;
+        }
+        .input-group input, .input-group select {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 15px;
+            background: #fafafa;
+            transition: border-color 0.2s;
+        }
+        .input-group input:focus, .input-group select:focus {
+            outline: none;
+            border-color: #1a73e8;
+            background: white;
+        }
+        .input-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+        .input-row-3 {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 8px;
+        }
+        .btn {
+            background: linear-gradient(135deg, #1a73e8 0%, #0d47a1 100%);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            transition: transform 0.1s, box-shadow 0.2s;
+        }
+        .btn:active { transform: scale(0.98); }
+        .btn-secondary {
+            background: #f5f5f5;
+            color: #333;
+            border: 1px solid #ddd;
+        }
+        .btn-danger {
+            background: linear-gradient(135deg, #e53935 0%, #b71c1c 100%);
+        }
+        .btn-success {
+            background: linear-gradient(135deg, #43a047 0%, #1b5e20 100%);
+        }
+        .btn-warning {
+            background: linear-gradient(135deg, #fb8c00 0%, #e65100 100%);
+        }
+        .btn-excel {
+            background: linear-gradient(135deg, #217346 0%, #0f5c2e 100%);
+        }
+        .account-selector {
+            display: flex;
+            gap: 8px;
+            overflow-x: auto;
+            padding: 4px 0;
+            margin-bottom: 10px;
+            -webkit-overflow-scrolling: touch;
+        }
+        .account-chip {
+            flex-shrink: 0;
+            padding: 8px 14px;
+            border-radius: 20px;
+            background: white;
+            border: 1px solid #ddd;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all 0.2s;
+        }
+        .account-chip.active {
+            background: #1a73e8;
+            color: white;
+            border-color: #1a73e8;
+        }
+        .account-chip .delete {
+            margin-left: 6px;
+            opacity: 0.6;
+            font-size: 12px;
+        }
+        .position-item {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 12px;
+            margin-bottom: 8px;
+            border-left: 3px solid #1a73e8;
+            position: relative;
+        }
+        .position-item.short { border-left-color: #e53935; }
+        .position-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 6px;
+        }
+        .position-name {
+            font-weight: 600;
+            font-size: 14px;
+        }
+        .position-direction {
+            font-size: 10px;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-weight: 600;
+        }
+        .direction-long { background: #e8f5e9; color: #2e7d32; }
+        .direction-short { background: #ffebee; color: #c62828; }
+        .position-details {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 4px;
+            font-size: 11px;
+            color: #666;
+        }
+        .position-details span {
+            display: flex;
+            justify-content: space-between;
+        }
+        .position-details .value {
+            font-weight: 600;
+            color: #333;
+        }
+        .profit-positive { color: #2e7d32; }
+        .profit-negative { color: #c62828; }
+        .summary-bar {
+            background: linear-gradient(135deg, #1a73e8 0%, #0d47a1 100%);
+            color: white;
+            padding: 14px;
+            border-radius: 12px;
+            margin-bottom: 10px;
+        }
+        .summary-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+        .summary-item {
+            text-align: center;
+        }
+        .summary-item .label {
+            font-size: 10px;
+            opacity: 0.8;
+            margin-bottom: 2px;
+        }
+        .summary-item .value {
+            font-size: 16px;
+            font-weight: 700;
+        }
+        .summary-item .sub {
+            font-size: 10px;
+            opacity: 0.7;
+        }
+        .tabs {
+            display: flex;
+            background: white;
+            border-radius: 12px;
+            padding: 3px;
+            margin-bottom: 10px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+        }
+        .tab {
+            flex: 1;
+            text-align: center;
+            padding: 9px;
+            font-size: 12px;
+            font-weight: 600;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: #666;
+        }
+        .tab.active {
+            background: #1a73e8;
+            color: white;
+        }
+        .section { display: none; }
+        .section.active { display: block; }
+        .risk-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 10px;
+            font-weight: 600;
+        }
+        .risk-normal { background: #e8f5e9; color: #2e7d32; }
+        .risk-warning { background: #fff3e0; color: #e65100; }
+        .risk-danger { background: #ffebee; color: #c62828; }
+        .risk-excellent { background: #e3f2fd; color: #1565c0; }
+        .delete-btn {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: #ffebee;
+            color: #c62828;
+            border: none;
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            font-size: 13px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .empty-state {
+            text-align: center;
+            padding: 30px 20px;
+            color: #999;
+        }
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 200;
+            align-items: flex-end;
+            justify-content: center;
+        }
+        .modal-overlay.show { display: flex; }
+        .modal {
+            background: white;
+            width: 100%;
+            max-width: 600px;
+            border-radius: 20px 20px 0 0;
+            padding: 18px;
+            max-height: 90vh;
+            overflow-y: auto;
+            animation: slideUp 0.3s ease;
+        }
+        @keyframes slideUp {
+            from { transform: translateY(100%); }
+            to { transform: translateY(0); }
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 14px;
+        }
+        .modal-header h3 {
+            font-size: 16px;
+        }
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 22px;
+            color: #999;
+            cursor: pointer;
+        }
+        .bottom-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: white;
+            padding: 8px 12px;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.08);
+            display: flex;
+            gap: 8px;
+            z-index: 50;
+        }
+        .bottom-bar .btn {
+            flex: 1;
+            padding: 10px;
+            font-size: 13px;
+        }
+        .toast {
+            position: fixed;
+            top: 60px;
+            left: 50%;
+            transform: translateX(-50%) translateY(-20px);
+            background: #333;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 13px;
+            opacity: 0;
+            transition: all 0.3s;
+            z-index: 300;
+            pointer-events: none;
+        }
+        .toast.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+        .record-item {
+            background: white;
+            border-radius: 10px;
+            padding: 12px;
+            margin-bottom: 8px;
+            border-left: 3px solid #888;
+            font-size: 12px;
+        }
+        .record-item.add { border-left-color: #43a047; }
+        .record-item.edit { border-left-color: #1a73e8; }
+        .record-item.delete { border-left-color: #e53935; }
+        .record-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 4px;
+            font-weight: 600;
+        }
+        .record-time {
+            color: #999;
+            font-size: 11px;
+        }
+        .record-detail {
+            color: #666;
+            line-height: 1.5;
+        }
+        .record-badge {
+            display: inline-block;
+            padding: 1px 6px;
+            border-radius: 8px;
+            font-size: 10px;
+            font-weight: 600;
+            margin-right: 4px;
+        }
+        .badge-add { background: #e8f5e9; color: #2e7d32; }
+        .badge-edit { background: #e3f2fd; color: #1565c0; }
+        .badge-delete { background: #ffebee; color: #c62828; }
+        .all-accounts-summary {
+            background: linear-gradient(135deg, #37474f 0%, #263238 100%);
+            color: white;
+            padding: 14px;
+            border-radius: 12px;
+            margin-bottom: 10px;
+        }
+        .all-accounts-summary .summary-grid {
+            gap: 8px;
+        }
+        .all-accounts-summary .summary-item .label {
+            font-size: 10px;
+            opacity: 0.7;
+        }
+        .all-accounts-summary .summary-item .value {
+            font-size: 15px;
+        }
+        .account-info-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 14px;
+            background: white;
+            border-radius: 10px;
+            margin-bottom: 10px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+        }
+        .account-info-bar .name {
+            font-weight: 600;
+            font-size: 15px;
+        }
+        .account-info-bar .equity {
+            color: #666;
+            font-size: 13px;
+        }
+        .account-info-bar .equity input {
+            width: 120px;
+            padding: 4px 8px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 13px;
+            text-align: right;
+        }
+        .filter-bar {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 10px;
+            overflow-x: auto;
+        }
+        .filter-chip {
+            flex-shrink: 0;
+            padding: 6px 12px;
+            border-radius: 16px;
+            background: white;
+            border: 1px solid #ddd;
+            font-size: 12px;
+            cursor: pointer;
+        }
+        .filter-chip.active {
+            background: #1a73e8;
+            color: white;
+            border-color: #1a73e8;
+        }
+        .sync-status {
+            position: fixed;
+            top: 60px;
+            right: 10px;
+            padding: 6px 12px;
+            border-radius: 16px;
+            font-size: 11px;
+            font-weight: 600;
+            z-index: 250;
+            transition: all 0.3s;
+            opacity: 0;
+        }
+        .sync-status.show { opacity: 1; }
+        .sync-status.syncing { background: #fff3e0; color: #e65100; }
+        .sync-status.synced { background: #e8f5e9; color: #2e7d32; }
+        .sync-status.error { background: #ffebee; color: #c62828; }
+        .export-options {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-top: 10px;
+        }
+        .export-option {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 12px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 2px solid transparent;
+        }
+        .export-option:hover {
+            border-color: #1a73e8;
+            background: #e3f2fd;
+        }
+        .export-option .icon {
+            font-size: 24px;
+            margin-bottom: 4px;
+        }
+        .export-option .label {
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .export-option .desc {
+            font-size: 10px;
+            color: #999;
+            margin-top: 2px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>📊 期货多账户仓位管理系统</h1>
+        <p>局域网版 · 多设备实时同步 · Excel导出</p>
+        <div class="server-info" id="serverInfo">正在连接服务器...</div>
+    </div>
+
+    <div class="sync-status" id="syncStatus">同步中...</div>
+
+    <div class="container">
+        <div class="card">
+            <div class="card-title">选择账户</div>
+            <div class="account-selector" id="accountSelector"></div>
+            <button class="btn btn-secondary" style="margin-top:6px;" onclick="openAccountModal()">➕ 新建账户</button>
+        </div>
+
+        <div class="tabs">
+            <div class="tab active" onclick="switchTab('positions')">📋 持仓明细</div>
+            <div class="tab" onclick="switchTab('plan')">📈 计划仓位</div>
+            <div class="tab" onclick="switchTab('records')">📝 操作记录</div>
+            <div class="tab" onclick="switchTab('overview')">📊 总览</div>
+        </div>
+
+        <div id="positionsSection" class="section active">
+            <div class="account-info-bar">
+                <span class="name" id="currentAccountName">--</span>
+                <span class="equity">
+                    权益: <input type="number" id="totalEquity" value="973635" placeholder="账户总权益">
+                </span>
+            </div>
+            <div class="summary-bar">
+                <div class="summary-grid">
+                    <div class="summary-item">
+                        <div class="label">总占用保证金</div>
+                        <div class="value" id="totalMargin">¥0</div>
+                    </div>
+                    <div class="summary-item">
+                        <div class="label">总仓位占比</div>
+                        <div class="value" id="totalRatio">0%</div>
+                        <div class="sub" id="totalRatioSub"></div>
+                    </div>
+                    <div class="summary-item">
+                        <div class="label">总浮动盈亏</div>
+                        <div class="value" id="totalPnL">¥0</div>
+                    </div>
+                    <div class="summary-item">
+                        <div class="label">总盈亏比例</div>
+                        <div class="value" id="totalPnLRatio">0%</div>
+                    </div>
+                </div>
+            </div>
+            <div id="positionsList"></div>
+            <div class="empty-state" id="emptyPositions" style="display:none;">
+                <p>暂无持仓，点击底部"添加合约"</p>
+            </div>
+        </div>
+
+        <div id="planSection" class="section">
+            <div class="account-info-bar">
+                <span class="name" id="planAccountName">--</span>
+                <span class="equity">
+                    权益: <input type="number" id="planTotalEquity" value="973635" placeholder="账户总权益">
+                </span>
+            </div>
+            <div class="summary-bar">
+                <div class="summary-grid">
+                    <div class="summary-item">
+                        <div class="label">计划总保证金</div>
+                        <div class="value" id="planTotalMargin">¥0</div>
+                    </div>
+                    <div class="summary-item">
+                        <div class="label">计划仓位占比</div>
+                        <div class="value" id="planTotalRatio">0%</div>
+                    </div>
+                    <div class="summary-item">
+                        <div class="label">预计总盈亏</div>
+                        <div class="value" id="planTotalPnL">¥0</div>
+                    </div>
+                    <div class="summary-item">
+                        <div class="label">预计盈亏比例</div>
+                        <div class="value" id="planTotalPnLRatio">0%</div>
+                    </div>
+                </div>
+            </div>
+            <div id="planList"></div>
+            <div class="empty-state" id="emptyPlan" style="display:none;">
+                <p>暂无计划仓位</p>
+            </div>
+        </div>
+
+        <div id="recordsSection" class="section">
+            <div class="card">
+                <div class="card-title">筛选记录</div>
+                <div class="filter-bar">
+                    <div class="filter-chip active" onclick="filterRecords('all')">全部</div>
+                    <div class="filter-chip" onclick="filterRecords('add')">新增</div>
+                    <div class="filter-chip" onclick="filterRecords('edit')">修改</div>
+                    <div class="filter-chip" onclick="filterRecords('delete')">删除</div>
+                </div>
+            </div>
+            <div id="recordsList"></div>
+            <div class="empty-state" id="emptyRecords" style="display:none;">
+                <p>暂无操作记录</p>
+            </div>
+        </div>
+
+        <div id="overviewSection" class="section">
+            <div class="all-accounts-summary">
+                <div style="text-align:center;font-size:13px;margin-bottom:10px;opacity:0.8;">所有账户汇总</div>
+                <div class="summary-grid">
+                    <div class="summary-item">
+                        <div class="label">账户总数</div>
+                        <div class="value" id="overviewAccountCount">0</div>
+                    </div>
+                    <div class="summary-item">
+                        <div class="label">总权益</div>
+                        <div class="value" id="overviewTotalEquity">¥0</div>
+                    </div>
+                    <div class="summary-item">
+                        <div class="label">总保证金</div>
+                        <div class="value" id="overviewTotalMargin">¥0</div>
+                    </div>
+                    <div class="summary-item">
+                        <div class="label">总盈亏</div>
+                        <div class="value" id="overviewTotalPnL">¥0</div>
+                    </div>
+                </div>
+            </div>
+            <div id="overviewList"></div>
+        </div>
+    </div>
+
+    <div class="bottom-bar">
+        <button class="btn" onclick="openModal()">➕ 添加</button>
+        <button class="btn btn-secondary" onclick="manualSync()">🔄 刷新</button>
+        <button class="btn btn-excel" onclick="openExportModal()">📊 导出</button>
+    </div>
+
+    <div class="modal-overlay" id="modalOverlay" onclick="closeModalOnOverlay(event)">
+        <div class="modal" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h3 id="modalTitle">添加合约</h3>
+                <button class="modal-close" onclick="closeModal()">&times;</button>
+            </div>
+            <div class="input-group">
+                <label>合约品种</label>
+                <input type="text" id="editName" placeholder="如：焦煤0901">
+            </div>
+            <div class="input-row">
+                <div class="input-group">
+                    <label>方向</label>
+                    <select id="editDirection">
+                        <option value="多">多（做多）</option>
+                        <option value="空">空（做空）</option>
+                    </select>
+                </div>
+                <div class="input-group">
+                    <label>手数</label>
+                    <input type="number" id="editLots" value="1" min="0">
+                </div>
+            </div>
+            <div class="input-row">
+                <div class="input-group">
+                    <label>开仓均价</label>
+                    <input type="number" id="editOpenPrice" step="0.01" placeholder="开仓价格">
+                </div>
+                <div class="input-group">
+                    <label>当前/预测价格</label>
+                    <input type="number" id="editCurrentPrice" step="0.01" placeholder="当前价格">
+                </div>
+            </div>
+            <div class="input-row-3">
+                <div class="input-group">
+                    <label>单品价格</label>
+                    <input type="number" id="editUnitPrice" step="0.01" placeholder="高腿价格">
+                </div>
+                <div class="input-group">
+                    <label>保证金比例</label>
+                    <input type="number" id="editMarginRate" step="0.01" value="0.1" placeholder="如0.12">
+                </div>
+                <div class="input-group">
+                    <label>合约乘数</label>
+                    <input type="number" id="editMultiplier" value="1" placeholder="如60">
+                </div>
+            </div>
+            <div style="margin-top:14px;">
+                <button class="btn" onclick="savePosition()" id="saveBtn">保存到持仓</button>
+                <button class="btn btn-success" onclick="savePlan()" style="margin-top:6px;">保存到计划仓位</button>
+                <button class="btn btn-danger" onclick="deleteCurrent()" id="deleteBtn" style="margin-top:6px;display:none;">删除</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="exportModalOverlay" onclick="closeExportModalOnOverlay(event)">
+        <div class="modal" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h3>📊 导出Excel报表</h3>
+                <button class="modal-close" onclick="closeExportModal()">&times;</button>
+            </div>
+            <p style="font-size:12px;color:#666;margin-bottom:12px;">选择要导出的内容，生成整洁美观的Excel表格</p>
+            <div class="export-options">
+                <div class="export-option" onclick="exportExcel('current')">
+                    <div class="icon">📋</div>
+                    <div class="label">当前账户</div>
+                    <div class="desc">导出当前选中账户</div>
+                </div>
+                <div class="export-option" onclick="exportExcel('all')">
+                    <div class="icon">📊</div>
+                    <div class="label">所有账户</div>
+                    <div class="desc">导出全部账户汇总</div>
+                </div>
+                <div class="export-option" onclick="exportExcel('positions')">
+                    <div class="icon">💼</div>
+                    <div class="label">仅持仓</div>
+                    <div class="desc">只导出持仓明细</div>
+                </div>
+                <div class="export-option" onclick="exportExcel('plans')">
+                    <div class="icon">📈</div>
+                    <div class="label">仅计划</div>
+                    <div class="desc">只导出计划仓位</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="accountModalOverlay" onclick="closeAccountModalOnOverlay(event)">
+        <div class="modal" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h3>新建账户</h3>
+                <button class="modal-close" onclick="closeAccountModal()">&times;</button>
+            </div>
+            <div class="input-group">
+                <label>账户名称</label>
+                <input type="text" id="newAccountName" placeholder="如：张三账户">
+            </div>
+            <div class="input-group">
+                <label>初始权益（元）</label>
+                <input type="number" id="newAccountEquity" value="1000000" placeholder="输入初始资金">
+            </div>
+            <div style="margin-top:14px;">
+                <button class="btn" onclick="createAccount()">创建账户</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script>
+        const API_BASE = window.location.origin.includes('localhost') || window.location.origin.includes('127.0.0.1') 
+            ? 'http://localhost:8080/api' 
+            : window.location.origin + '/api';
+
+        let accounts = [];
+        let records = [];
+        let currentAccountId = null;
+        let editingIndex = -1;
+        let editingType = 'position';
+        let recordFilter = 'all';
+        let isOnline = false;
+
+        function calcMarginPerHand(unitPrice, marginRate, multiplier) {
+            return unitPrice * marginRate * multiplier;
+        }
+        function calcMargin(marginPerHand, lots) {
+            return marginPerHand * lots;
+        }
+        function calcRatio(margin, totalEquity) {
+            return totalEquity > 0 ? margin / totalEquity : 0;
+        }
+        function calcPnL(direction, openPrice, currentPrice, multiplier, lots) {
+            const diff = direction === '多' ? (currentPrice - openPrice) : (openPrice - currentPrice);
+            return diff * multiplier * lots;
+        }
+        function calcPnLRatio(pnl, margin) {
+            return margin > 0 ? pnl / margin : 0;
+        }
+        function getRiskRating(ratio) {
+            if (ratio >= 0.3) return { text: '高危', class: 'risk-danger' };
+            if (ratio >= 0.15) return { text: '警告', class: 'risk-warning' };
+            if (ratio >= 0) return { text: '正常', class: 'risk-normal' };
+            return { text: '优秀', class: 'risk-excellent' };
+        }
+        function formatMoney(num) {
+            if (num === undefined || num === null) return '¥0';
+            const abs = Math.abs(num);
+            if (abs >= 100000000) return (num >= 0 ? '' : '-') + '¥' + (abs / 100000000).toFixed(2) + '亿';
+            if (abs >= 10000) return (num >= 0 ? '' : '-') + '¥' + (abs / 10000).toFixed(2) + '万';
+            return (num >= 0 ? '¥' : '-¥') + abs.toFixed(2);
+        }
+        function formatPercent(num) {
+            if (num === undefined || num === null) return '0%';
+            return (num * 100).toFixed(2) + '%';
+        }
+        function formatTime(date) {
+            const d = new Date(date);
+            return `${d.getMonth()+1}/${d.getDate()} ${d.getHours().toString().padStart(2,'0')}:${d.getMinutes().toString().padStart(2,'0')}`;
+        }
+        function formatDateTime(date) {
+            const d = new Date(date);
+            return `${d.getFullYear()}-${(d.getMonth()+1).toString().padStart(2,'0')}-${d.getDate().toString().padStart(2,'0')} ${d.getHours().toString().padStart(2,'0')}:${d.getMinutes().toString().padStart(2,'0')}`;
+        }
+
+        async function apiCall(method, endpoint, data) {
+            showSyncStatus('syncing', '同步中...');
+            try {
+                const options = {
+                    method: method,
+                    headers: { 'Content-Type': 'application/json' }
+                };
+                if (data) options.body = JSON.stringify(data);
+                const response = await fetch(API_BASE + endpoint, options);
+                if (!response.ok) throw new Error('API error: ' + response.status);
+                const result = await response.json();
+                showSyncStatus('synced', '已同步');
+                isOnline = true;
+                return result;
+            } catch (e) {
+                showSyncStatus('error', '离线模式');
+                isOnline = false;
+                return null;
+            }
+        }
+
+        async function loadData() {
+            const result = await apiCall('GET', '/data');
+            if (result) {
+                accounts = result.accounts || [];
+                records = result.records || [];
+                currentAccountId = result.currentAccountId || (accounts.length > 0 ? accounts[0].id : null);
+                document.getElementById('serverInfo').textContent = '✅ 已连接服务器 · 实时同步';
+            } else {
+                accounts = JSON.parse(localStorage.getItem('futures_accounts_backup') || '[]');
+                records = JSON.parse(localStorage.getItem('futures_records_backup') || '[]');
+                currentAccountId = localStorage.getItem('futures_current_account_backup') || (accounts.length > 0 ? accounts[0].id : null);
+                document.getElementById('serverInfo').textContent = '⚠️ 离线模式 · 数据仅本地保存';
+                if (accounts.length === 0) initDefaultData();
+            }
+            renderAll();
+        }
+
+        async function saveToServer() {
+            const result = await apiCall('POST', '/data', {
+                accounts: accounts,
+                records: records,
+                currentAccountId: currentAccountId
+            });
+            if (!result) {
+                localStorage.setItem('futures_accounts_backup', JSON.stringify(accounts));
+                localStorage.setItem('futures_records_backup', JSON.stringify(records));
+                localStorage.setItem('futures_current_account_backup', currentAccountId);
+            }
+        }
+
+        function initDefaultData() {
+            const defaultAccount = {
+                id: 'acc_' + Date.now(),
+                name: '默认账户',
+                equity: 973635,
+                positions: [
+                    { name: '焦煤0901', direction: '多', lots: 6, openPrice: -233.17, currentPrice: -250, unitPrice: 1495, marginRate: 0.12, multiplier: 60 },
+                    { name: '塑料PVC09', direction: '空', lots: 72, openPrice: 3087.56, currentPrice: 3007, unitPrice: 8147, marginRate: 0.11, multiplier: 5 },
+                    { name: '甲醇0610', direction: '空', lots: 1, openPrice: 320, currentPrice: 167, unitPrice: 2986, marginRate: 0.11, multiplier: 10 },
+                    { name: '烧碱0709', direction: '多', lots: 4, openPrice: -227, currentPrice: -220, unitPrice: 2260, marginRate: 0.08, multiplier: 30 }
+                ],
+                plans: [
+                    { name: '焦煤0901', direction: '多', lots: 6, openPrice: -233.17, currentPrice: -250, unitPrice: 1495, marginRate: 0.12, multiplier: 60 },
+                    { name: '塑料PVC09', direction: '空', lots: 72, openPrice: 3087.56, currentPrice: 3007, unitPrice: 8147, marginRate: 0.11, multiplier: 5 },
+                    { name: '甲醇0610', direction: '空', lots: 1, openPrice: 320, currentPrice: 167, unitPrice: 2986, marginRate: 0.11, multiplier: 10 },
+                    { name: '烧碱0709', direction: '多', lots: 4, openPrice: -227, currentPrice: -220, unitPrice: 2260, marginRate: 0.08, multiplier: 30 }
+                ]
+            };
+            accounts.push(defaultAccount);
+            currentAccountId = defaultAccount.id;
+            addRecord(defaultAccount.id, defaultAccount.name, 'create', '创建账户', `创建了账户"${defaultAccount.name}"，初始权益${defaultAccount.equity}元`);
+        }
+
+        function addRecord(accountId, accountName, type, action, detail, before, after) {
+            const record = {
+                id: 'rec_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+                time: new Date().toISOString(),
+                accountId: accountId,
+                accountName: accountName,
+                type: type,
+                action: action,
+                detail: detail,
+                before: before || '',
+                after: after || ''
+            };
+            records.unshift(record);
+            if (records.length > 500) records = records.slice(0, 500);
+        }
+
+        function getCurrentAccount() {
+            return accounts.find(a => a.id === currentAccountId);
+        }
+
+        function renderAccountSelector() {
+            const container = document.getElementById('accountSelector');
+            let html = '';
+            accounts.forEach(acc => {
+                const isActive = acc.id === currentAccountId;
+                html += `<div class="account-chip ${isActive ? 'active' : ''}" onclick="switchAccount('${acc.id}')">${acc.name}${accounts.length > 1 ? `<span class="delete" onclick="event.stopPropagation();deleteAccount('${acc.id}')">×</span>` : ''}</div>`;
+            });
+            container.innerHTML = html;
+        }
+
+        async function switchAccount(id) {
+            currentAccountId = id;
+            await saveToServer();
+            renderAccountSelector();
+            renderAll();
+            showToast('已切换到: ' + getCurrentAccount().name);
+        }
+
+        function openAccountModal() {
+            document.getElementById('newAccountName').value = '';
+            document.getElementById('newAccountEquity').value = '1000000';
+            document.getElementById('accountModalOverlay').classList.add('show');
+        }
+        function closeAccountModal() {
+            document.getElementById('accountModalOverlay').classList.remove('show');
+        }
+        function closeAccountModalOnOverlay(e) {
+            if (e.target === document.getElementById('accountModalOverlay')) closeAccountModal();
+        }
+
+        async function createAccount() {
+            const name = document.getElementById('newAccountName').value.trim();
+            const equity = parseFloat(document.getElementById('newAccountEquity').value) || 0;
+            if (!name) { showToast('请输入账户名称'); return; }
+            const newAccount = {
+                id: 'acc_' + Date.now(),
+                name: name,
+                equity: equity,
+                positions: [],
+                plans: []
+            };
+            accounts.push(newAccount);
+            currentAccountId = newAccount.id;
+            addRecord(newAccount.id, newAccount.name, 'create', '创建账户', `创建了账户"${name}"，初始权益${equity}元`);
+            await saveToServer();
+            closeAccountModal();
+            renderAccountSelector();
+            renderAll();
+            showToast('账户创建成功');
+        }
+
+        async function deleteAccount(id) {
+            if (accounts.length <= 1) { showToast('至少保留一个账户'); return; }
+            const acc = accounts.find(a => a.id === id);
+            if (!acc) return;
+            if (!confirm(`确定删除账户"${acc.name}"吗？`)) return;
+            addRecord(acc.id, acc.name, 'delete_account', '删除账户', `删除了账户"${acc.name}"`);
+            accounts = accounts.filter(a => a.id !== id);
+            if (currentAccountId === id) currentAccountId = accounts[0].id;
+            await saveToServer();
+            renderAccountSelector();
+            renderAll();
+            showToast('账户已删除');
+        }
+
+        function renderPositions() {
+            const acc = getCurrentAccount();
+            if (!acc) return;
+            document.getElementById('currentAccountName').textContent = acc.name;
+            document.getElementById('totalEquity').value = acc.equity;
+            const container = document.getElementById('positionsList');
+            const totalEquity = acc.equity;
+            if (acc.positions.length === 0) {
+                container.innerHTML = '';
+                document.getElementById('emptyPositions').style.display = 'block';
+                updateSummary(0, 0, 0, 0);
+                return;
+            }
+            document.getElementById('emptyPositions').style.display = 'none';
+            let totalMargin = 0, totalPnL = 0;
+            let html = '';
+            acc.positions.forEach((pos, index) => {
+                const marginPerHand = calcMarginPerHand(pos.unitPrice, pos.marginRate, pos.multiplier);
+                const margin = calcMargin(marginPerHand, pos.lots);
+                const pnl = calcPnL(pos.direction, pos.openPrice, pos.currentPrice, pos.multiplier, pos.lots);
+                const ratio = calcRatio(margin, totalEquity);
+                const pnlRatio = calcPnLRatio(pnl, margin);
+                const risk = getRiskRating(pnlRatio);
+                totalMargin += margin;
+                totalPnL += pnl;
+                html += `<div class="position-item ${pos.direction === '空' ? 'short' : ''}" onclick="editPosition(${index})"><button class="delete-btn" onclick="event.stopPropagation();deletePosition(${index})">&times;</button><div class="position-header"><span class="position-name">${pos.name}</span><span class="position-direction ${pos.direction === '多' ? 'direction-long' : 'direction-short'}">${pos.direction}</span></div><div class="position-details"><span>手数: <span class="value">${pos.lots}手</span></span><span>开仓: <span class="value">${pos.openPrice}</span></span><span>现价: <span class="value">${pos.currentPrice}</span></span><span>保证金: <span class="value">${formatMoney(margin)}</span></span><span>仓位: <span class="value">${formatPercent(ratio)}</span></span><span>盈亏: <span class="value ${pnl >= 0 ? 'profit-positive' : 'profit-negative'}">${pnl >= 0 ? '+' : ''}${formatMoney(pnl)}</span></span><span>盈亏比: <span class="value ${pnlRatio >= 0 ? 'profit-positive' : 'profit-negative'}">${pnlRatio >= 0 ? '+' : ''}${formatPercent(pnlRatio)}</span></span><span>评级: <span class="risk-badge ${risk.class}">${risk.text}</span></span></div></div>`;
+            });
+            container.innerHTML = html;
+            const totalRatio = calcRatio(totalMargin, totalEquity);
+            const totalPnLRatio = calcPnLRatio(totalPnL, totalMargin);
+            updateSummary(totalMargin, totalRatio, totalPnL, totalPnLRatio);
+        }
+
+        function updateSummary(margin, ratio, pnl, pnlRatio) {
+            document.getElementById('totalMargin').textContent = formatMoney(margin);
+            document.getElementById('totalRatio').textContent = formatPercent(ratio);
+            document.getElementById('totalRatioSub').textContent = ratio > 0.5 ? '⚠️ 仓位较高' : '';
+            document.getElementById('totalPnL').textContent = (pnl >= 0 ? '+' : '') + formatMoney(pnl);
+            document.getElementById('totalPnL').style.color = pnl >= 0 ? '#2e7d32' : '#c62828';
+            document.getElementById('totalPnLRatio').textContent = (pnlRatio >= 0 ? '+' : '') + formatPercent(pnlRatio);
+            document.getElementById('totalPnLRatio').style.color = pnlRatio >= 0 ? '#2e7d32' : '#c62828';
+        }
+
+        function renderPlans() {
+            const acc = getCurrentAccount();
+            if (!acc) return;
+            document.getElementById('planAccountName').textContent = acc.name;
+            document.getElementById('planTotalEquity').value = acc.equity;
+            const container = document.getElementById('planList');
+            const totalEquity = acc.equity;
+            if (acc.plans.length === 0) {
+                container.innerHTML = '';
+                document.getElementById('emptyPlan').style.display = 'block';
+                updatePlanSummary(0, 0, 0, 0);
+                return;
+            }
+            document.getElementById('emptyPlan').style.display = 'none';
+            let totalMargin = 0, totalPnL = 0;
+            let html = '';
+            acc.plans.forEach((pos, index) => {
+                const marginPerHand = calcMarginPerHand(pos.unitPrice, pos.marginRate, pos.multiplier);
+                const margin = calcMargin(marginPerHand, pos.lots);
+                const pnl = calcPnL(pos.direction, pos.openPrice, pos.currentPrice, pos.multiplier, pos.lots);
+                const ratio = calcRatio(margin, totalEquity);
+                const pnlRatio = calcPnLRatio(pnl, margin);
+                const risk = getRiskRating(pnlRatio);
+                totalMargin += margin;
+                totalPnL += pnl;
+                html += `<div class="position-item ${pos.direction === '空' ? 'short' : ''}" onclick="editPlan(${index})"><button class="delete-btn" onclick="event.stopPropagation();deletePlan(${index})">&times;</button><div class="position-header"><span class="position-name">${pos.name}</span><span class="position-direction ${pos.direction === '多' ? 'direction-long' : 'direction-short'}">${pos.direction}</span></div><div class="position-details"><span>计划手数: <span class="value">${pos.lots}手</span></span><span>开仓: <span class="value">${pos.openPrice}</span></span><span>预测: <span class="value">${pos.currentPrice}</span></span><span>保证金: <span class="value">${formatMoney(margin)}</span></span><span>仓位: <span class="value">${formatPercent(ratio)}</span></span><span>预计盈亏: <span class="value ${pnl >= 0 ? 'profit-positive' : 'profit-negative'}">${pnl >= 0 ? '+' : ''}${formatMoney(pnl)}</span></span><span>盈亏比: <span class="value ${pnlRatio >= 0 ? 'profit-positive' : 'profit-negative'}">${pnlRatio >= 0 ? '+' : ''}${formatPercent(pnlRatio)}</span></span><span>评级: <span class="risk-badge ${risk.class}">${risk.text}</span></span></div></div>`;
+            });
+            container.innerHTML = html;
+            const totalRatio = calcRatio(totalMargin, totalEquity);
+            const totalPnLRatio = calcPnLRatio(totalPnL, totalMargin);
+            updatePlanSummary(totalMargin, totalRatio, totalPnL, totalPnLRatio);
+        }
+
+        function updatePlanSummary(margin, ratio, pnl, pnlRatio) {
+            document.getElementById('planTotalMargin').textContent = formatMoney(margin);
+            document.getElementById('planTotalRatio').textContent = formatPercent(ratio);
+            document.getElementById('planTotalPnL').textContent = (pnl >= 0 ? '+' : '') + formatMoney(pnl);
+            document.getElementById('planTotalPnL').style.color = pnl >= 0 ? '#2e7d32' : '#c62828';
+            document.getElementById('planTotalPnLRatio').textContent = (pnlRatio >= 0 ? '+' : '') + formatPercent(pnlRatio);
+            document.getElementById('planTotalPnLRatio').style.color = pnlRatio >= 0 ? '#2e7d32' : '#c62828';
+        }
+
+        function renderRecords() {
+            const container = document.getElementById('recordsList');
+            let filtered = records;
+            if (recordFilter !== 'all') filtered = records.filter(r => r.type === recordFilter);
+            if (filtered.length === 0) {
+                container.innerHTML = '';
+                document.getElementById('emptyRecords').style.display = 'block';
+                return;
+            }
+            document.getElementById('emptyRecords').style.display = 'none';
+            let html = '';
+            filtered.forEach(rec => {
+                const badgeClass = rec.type === 'add' ? 'badge-add' : rec.type === 'edit' ? 'badge-edit' : rec.type === 'delete' ? 'badge-delete' : 'badge-edit';
+                const typeText = rec.type === 'add' ? '新增' : rec.type === 'edit' ? '修改' : rec.type === 'delete' ? '删除' : rec.type === 'create' ? '创建' : rec.type === 'delete_account' ? '删户' : rec.type;
+                html += `<div class="record-item ${rec.type}"><div class="record-header"><span><span class="record-badge ${badgeClass}">${typeText}</span>${rec.accountName}</span><span class="record-time">${formatTime(rec.time)}</span></div><div class="record-detail">${rec.detail}</div>${rec.before ? `<div style="color:#999;font-size:11px;margin-top:2px;">修改前: ${rec.before}</div>` : ''}${rec.after ? `<div style="color:#1a73e8;font-size:11px;margin-top:2px;">修改后: ${rec.after}</div>` : ''}</div>`;
+            });
+            container.innerHTML = html;
+        }
+
+        function filterRecords(type) {
+            recordFilter = type;
+            document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+            event.target.classList.add('active');
+            renderRecords();
+        }
+
+        function renderOverview() {
+            let totalEquity = 0, totalMargin = 0, totalPnL = 0;
+            accounts.forEach(acc => {
+                totalEquity += acc.equity;
+                acc.positions.forEach(pos => {
+                    const marginPerHand = calcMarginPerHand(pos.unitPrice, pos.marginRate, pos.multiplier);
+                    totalMargin += calcMargin(marginPerHand, pos.lots);
+                    totalPnL += calcPnL(pos.direction, pos.openPrice, pos.currentPrice, pos.multiplier, pos.lots);
+                });
+            });
+            document.getElementById('overviewAccountCount').textContent = accounts.length;
+            document.getElementById('overviewTotalEquity').textContent = formatMoney(totalEquity);
+            document.getElementById('overviewTotalMargin').textContent = formatMoney(totalMargin);
+            document.getElementById('overviewTotalPnL').textContent = (totalPnL >= 0 ? '+' : '') + formatMoney(totalPnL);
+            document.getElementById('overviewTotalPnL').style.color = totalPnL >= 0 ? '#2e7d32' : '#c62828';
+            let html = '';
+            accounts.forEach(acc => {
+                let accMargin = 0, accPnL = 0;
+                acc.positions.forEach(pos => {
+                    const marginPerHand = calcMarginPerHand(pos.unitPrice, pos.marginRate, pos.multiplier);
+                    accMargin += calcMargin(marginPerHand, pos.lots);
+                    accPnL += calcPnL(pos.direction, pos.openPrice, pos.currentPrice, pos.multiplier, pos.lots);
+                });
+                const accRatio = calcRatio(accMargin, acc.equity);
+                html += `<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;"><span style="font-weight:600;font-size:14px;">${acc.name}</span><span style="font-size:12px;color:#666;">${acc.positions.length}持仓 / ${acc.plans.length}计划</span></div><div class="position-details"><span>权益: <span class="value">${formatMoney(acc.equity)}</span></span><span>保证金: <span class="value">${formatMoney(accMargin)}</span></span><span>仓位: <span class="value">${formatPercent(accRatio)}</span></span><span>盈亏: <span class="value ${accPnL >= 0 ? 'profit-positive' : 'profit-negative'}">${accPnL >= 0 ? '+' : ''}${formatMoney(accPnL)}</span></span></div></div>`;
+            });
+            document.getElementById('overviewList').innerHTML = html;
+        }
+
+        function switchTab(tab) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+            event.target.classList.add('active');
+            document.getElementById(tab + 'Section').classList.add('active');
+            if (tab === 'overview') renderOverview();
+            if (tab === 'records') renderRecords();
+        }
+
+        function openModal() {
+            editingIndex = -1;
+            editingType = 'position';
+            document.getElementById('modalTitle').textContent = '添加合约';
+            document.getElementById('deleteBtn').style.display = 'none';
+            clearForm();
+            document.getElementById('modalOverlay').classList.add('show');
+        }
+        function closeModal() {
+            document.getElementById('modalOverlay').classList.remove('show');
+        }
+        function closeModalOnOverlay(e) {
+            if (e.target === document.getElementById('modalOverlay')) closeModal();
+        }
+        function clearForm() {
+            document.getElementById('editName').value = '';
+            document.getElementById('editDirection').value = '多';
+            document.getElementById('editLots').value = '1';
+            document.getElementById('editOpenPrice').value = '';
+            document.getElementById('editCurrentPrice').value = '';
+            document.getElementById('editUnitPrice').value = '';
+            document.getElementById('editMarginRate').value = '0.1';
+            document.getElementById('editMultiplier').value = '1';
+        }
+
+        function editPosition(index) {
+            editingIndex = index;
+            editingType = 'position';
+            const acc = getCurrentAccount();
+            const pos = acc.positions[index];
+            fillForm(pos);
+            document.getElementById('modalTitle').textContent = '编辑持仓 - ' + pos.name;
+            document.getElementById('deleteBtn').style.display = 'block';
+            document.getElementById('modalOverlay').classList.add('show');
+        }
+
+        function editPlan(index) {
+            editingIndex = index;
+            editingType = 'plan';
+            const acc = getCurrentAccount();
+            const pos = acc.plans[index];
+            fillForm(pos);
+            document.getElementById('modalTitle').textContent = '编辑计划 - ' + pos.name;
+            document.getElementById('deleteBtn').style.display = 'block';
+            document.getElementById('modalOverlay').classList.add('show');
+        }
+
+        function fillForm(pos) {
+            document.getElementById('editName').value = pos.name;
+            document.getElementById('editDirection').value = pos.direction;
+            document.getElementById('editLots').value = pos.lots;
+            document.getElementById('editOpenPrice').value = pos.openPrice;
+            document.getElementById('editCurrentPrice').value = pos.currentPrice;
+            document.getElementById('editUnitPrice').value = pos.unitPrice;
+            document.getElementById('editMarginRate').value = pos.marginRate;
+            document.getElementById('editMultiplier').value = pos.multiplier;
+        }
+
+        function getFormData() {
+            return {
+                name: document.getElementById('editName').value || '未命名',
+                direction: document.getElementById('editDirection').value,
+                lots: parseFloat(document.getElementById('editLots').value) || 0,
+                openPrice: parseFloat(document.getElementById('editOpenPrice').value) || 0,
+                currentPrice: parseFloat(document.getElementById('editCurrentPrice').value) || 0,
+                unitPrice: parseFloat(document.getElementById('editUnitPrice').value) || 0,
+                marginRate: parseFloat(document.getElementById('editMarginRate').value) || 0,
+                multiplier: parseFloat(document.getElementById('editMultiplier').value) || 1
+            };
+        }
+
+        function posToString(pos) {
+            return `${pos.name} ${pos.direction}${pos.lots}手 开仓${pos.openPrice} 现价${pos.currentPrice}`;
+        }
+
+        async function savePosition() {
+            const acc = getCurrentAccount();
+            const data = getFormData();
+            if (editingIndex >= 0 && editingType === 'position') {
+                const oldPos = acc.positions[editingIndex];
+                acc.positions[editingIndex] = data;
+                addRecord(acc.id, acc.name, 'edit', '修改持仓', `修改持仓"${data.name}"`, posToString(oldPos), posToString(data));
+            } else {
+                acc.positions.push(data);
+                addRecord(acc.id, acc.name, 'add', '新增持仓', `新增持仓"${data.name}" ${data.direction}${data.lots}手`);
+            }
+            await saveToServer();
+            closeModal();
+            renderPositions();
+            showToast('持仓已保存');
+        }
+
+        async function savePlan() {
+            const acc = getCurrentAccount();
+            const data = getFormData();
+            if (editingIndex >= 0 && editingType === 'plan') {
+                const oldPos = acc.plans[editingIndex];
+                acc.plans[editingIndex] = data;
+                addRecord(acc.id, acc.name, 'edit', '修改计划', `修改计划"${data.name}"`, posToString(oldPos), posToString(data));
+            } else {
+                acc.plans.push(data);
+                addRecord(acc.id, acc.name, 'add', '新增计划', `新增计划"${data.name}" ${data.direction}${data.lots}手`);
+            }
+            await saveToServer();
+            closeModal();
+            renderPlans();
+            showToast('计划仓位已保存');
+        }
+
+        async function deleteCurrent() {
+            if (editingType === 'position') {
+                await deletePosition(editingIndex);
+            } else {
+                await deletePlan(editingIndex);
+            }
+            closeModal();
+        }
+
+        async function deletePosition(index) {
+            const acc = getCurrentAccount();
+            const pos = acc.positions[index];
+            acc.positions.splice(index, 1);
+            addRecord(acc.id, acc.name, 'delete', '删除持仓', `删除持仓"${pos.name}" ${pos.direction}${pos.lots}手`, posToString(pos), '');
+            await saveToServer();
+            renderPositions();
+            showToast('持仓已删除');
+        }
+
+        async function deletePlan(index) {
+            const acc = getCurrentAccount();
+            const pos = acc.plans[index];
+            acc.plans.splice(index, 1);
+            addRecord(acc.id, acc.name, 'delete', '删除计划', `删除计划"${pos.name}" ${pos.direction}${pos.lots}手`, posToString(pos), '');
+            await saveToServer();
+            renderPlans();
+            showToast('计划仓位已删除');
+        }
+
+        async function manualSync() {
+            await loadData();
+            showToast('数据已刷新');
+        }
+
+        function exportData() {
+            const data = {
+                exportTime: new Date().toISOString(),
+                accounts: accounts,
+                records: records
+            };
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `期货仓位数据_${new Date().toLocaleDateString()}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+            showToast('数据已导出');
+        }
+
+        function openExportModal() {
+            document.getElementById('exportModalOverlay').classList.add('show');
+        }
+        function closeExportModal() {
+            document.getElementById('exportModalOverlay').classList.remove('show');
+        }
+        function closeExportModalOnOverlay(e) {
+            if (e.target === document.getElementById('exportModalOverlay')) closeExportModal();
+        }
+
+        // ==================== Excel导出核心功能 ====================
+        function exportExcel(mode) {
+            closeExportModal();
+            const wb = XLSX.utils.book_new();
+            wb.Props = {
+                Title: "期货仓位管理与风险评估系统",
+                Subject: "仓位数据导出",
+                Author: "期货管理系统",
+                CreatedDate: new Date()
+            };
+            const now = new Date();
+            const dateStr = `${now.getFullYear()}${(now.getMonth()+1).toString().padStart(2,'0')}${now.getDate().toString().padStart(2,'0')}`;
+
+            if (mode === 'current' || mode === 'positions' || mode === 'plans') {
+                const acc = getCurrentAccount();
+                if (!acc) { showToast('没有可导出的账户'); return; }
+                if (mode !== 'plans') addPositionSheet(wb, acc, '持仓明细');
+                if (mode !== 'positions') addPlanSheet(wb, acc, '计划仓位');
+                XLSX.writeFile(wb, `期货仓位_${acc.name}_${dateStr}.xlsx`);
+                showToast(`已导出: ${acc.name}`);
+            } else if (mode === 'all') {
+                accounts.forEach(acc => {
+                    if (acc.positions.length > 0) addPositionSheet(wb, acc, `${acc.name}_持仓`);
+                    if (acc.plans.length > 0) addPlanSheet(wb, acc, `${acc.name}_计划`);
+                });
+                addSummarySheet(wb, '总览汇总');
+                XLSX.writeFile(wb, `期货仓位_全部账户_${dateStr}.xlsx`);
+                showToast('已导出所有账户');
+            }
+        }
+
+        function addPositionSheet(wb, acc, sheetName) {
+            const totalEquity = acc.equity;
+            let totalMargin = 0, totalPnL = 0;
+            const data = [];
+
+            // 标题
+            data.push(['期货仓位管理与风险评估系统']);
+            data.push([]);
+            data.push(['一、账户基本信息']);
+            data.push(['项目', '数值', '单位', '说明']);
+            data.push(['账户名称', acc.name, '', '']);
+            data.push(['账户总权益', totalEquity, '元', '当前账户总资金']);
+            data.push([]);
+            data.push(['二、持仓明细（自动计算）']);
+            data.push(['序号', '品种', '方向', '持仓手数', '开仓均价', '当前价格', '单品价格（高腿）', '保证金比例', '合约乘数', '每手保证金', '占用保证金', '仓位占比', '浮动盈亏', '盈亏比例', '风险评级']);
+
+            acc.positions.forEach((pos, idx) => {
+                const marginPerHand = calcMarginPerHand(pos.unitPrice, pos.marginRate, pos.multiplier);
+                const margin = calcMargin(marginPerHand, pos.lots);
+                const pnl = calcPnL(pos.direction, pos.openPrice, pos.currentPrice, pos.multiplier, pos.lots);
+                const ratio = calcRatio(margin, totalEquity);
+                const pnlRatio = calcPnLRatio(pnl, margin);
+                const risk = getRiskRating(pnlRatio);
+                totalMargin += margin;
+                totalPnL += pnl;
+
+                data.push([
+                    idx + 1,
+                    pos.name,
+                    pos.direction,
+                    pos.lots,
+                    pos.openPrice,
+                    pos.currentPrice,
+                    pos.unitPrice,
+                    pos.marginRate,
+                    pos.multiplier,
+                    marginPerHand.toFixed(2),
+                    margin.toFixed(2),
+                    ratio.toFixed(4),
+                    pnl.toFixed(2),
+                    pnlRatio.toFixed(4),
+                    risk.text
+                ]);
+            });
+
+            // 空行
+            for (let i = acc.positions.length; i < 10; i++) {
+                data.push([i + 1, '', '', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, '']);
+            }
+
+            // 汇总行
+            const totalRatio = calcRatio(totalMargin, totalEquity);
+            const totalPnLRatio = calcPnLRatio(totalPnL, totalMargin);
+            data.push(['总仓位', '', '', '', '', '', '', '', '', '', totalMargin.toFixed(2), totalRatio.toFixed(4), totalPnL.toFixed(2), totalPnLRatio.toFixed(4), '']);
+
+            const ws = XLSX.utils.aoa_to_sheet(data);
+
+            // 设置列宽
+            ws['!cols'] = [
+                {wch: 6}, {wch: 12}, {wch: 6}, {wch: 10}, {wch: 12}, 
+                {wch: 12}, {wch: 16}, {wch: 12}, {wch: 10}, {wch: 14},
+                {wch: 14}, {wch: 12}, {wch: 14}, {wch: 12}, {wch: 10}
+            ];
+
+            // 合并标题单元格
+            ws['!merges'] = [
+                {s: {r: 0, c: 0}, e: {r: 0, c: 14}},
+                {s: {r: 2, c: 0}, e: {r: 2, c: 3}},
+                {s: {r: 7, c: 0}, e: {r: 7, c: 14}}
+            ];
+
+            XLSX.utils.book_append_sheet(wb, ws, sheetName);
+        }
+
+        function addPlanSheet(wb, acc, sheetName) {
+            const totalEquity = acc.equity;
+            let totalMargin = 0, totalPnL = 0;
+            const data = [];
+
+            data.push(['期货仓位管理与风险评估系统 - 计划仓位']);
+            data.push([]);
+            data.push(['三、计划仓位表（自动计算）']);
+            data.push(['序号', '品种', '方向', '计划手数', '开仓均价', '预测价格', '单品价格（高腿）', '保证金比例', '合约乘数', '每手保证金', '占用保证金', '仓位占比', '预计盈亏', '盈亏比例', '风险评级']);
+
+            acc.plans.forEach((pos, idx) => {
+                const marginPerHand = calcMarginPerHand(pos.unitPrice, pos.marginRate, pos.multiplier);
+                const margin = calcMargin(marginPerHand, pos.lots);
+                const pnl = calcPnL(pos.direction, pos.openPrice, pos.currentPrice, pos.multiplier, pos.lots);
+                const ratio = calcRatio(margin, totalEquity);
+                const pnlRatio = calcPnLRatio(pnl, margin);
+                const risk = getRiskRating(pnlRatio);
+                totalMargin += margin;
+                totalPnL += pnl;
+
+                data.push([
+                    idx + 1, pos.name, pos.direction, pos.lots, pos.openPrice,
+                    pos.currentPrice, pos.unitPrice, pos.marginRate, pos.multiplier,
+                    marginPerHand.toFixed(2), margin.toFixed(2), ratio.toFixed(4),
+                    pnl.toFixed(2), pnlRatio.toFixed(4), risk.text
+                ]);
+            });
+
+            for (let i = acc.plans.length; i < 10; i++) {
+                data.push([i + 1, '', '', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, '']);
+            }
+
+            const totalRatio = calcRatio(totalMargin, totalEquity);
+            const totalPnLRatio = calcPnLRatio(totalPnL, totalMargin);
+            data.push(['总仓位', '', '', '', '', '', '', '', '', '', totalMargin.toFixed(2), totalRatio.toFixed(4), totalPnL.toFixed(2), totalPnLRatio.toFixed(4), '']);
+
+            const ws = XLSX.utils.aoa_to_sheet(data);
+            ws['!cols'] = [
+                {wch: 6}, {wch: 12}, {wch: 6}, {wch: 10}, {wch: 12}, 
+                {wch: 12}, {wch: 16}, {wch: 12}, {wch: 10}, {wch: 14},
+                {wch: 14}, {wch: 12}, {wch: 14}, {wch: 12}, {wch: 10}
+            ];
+            ws['!merges'] = [
+                {s: {r: 0, c: 0}, e: {r: 0, c: 14}},
+                {s: {r: 2, c: 0}, e: {r: 2, c: 14}}
+            ];
+
+            XLSX.utils.book_append_sheet(wb, ws, sheetName);
+        }
+
+        function addSummarySheet(wb, sheetName) {
+            const data = [];
+            data.push(['期货仓位管理 - 所有账户总览']);
+            data.push([]);
+            data.push(['导出时间', formatDateTime(new Date())]);
+            data.push([]);
+            data.push(['账户名称', '总权益', '总保证金', '总仓位占比', '总浮动盈亏', '持仓数量', '计划数量']);
+
+            let grandEquity = 0, grandMargin = 0, grandPnL = 0;
+
+            accounts.forEach(acc => {
+                let accMargin = 0, accPnL = 0;
+                acc.positions.forEach(pos => {
+                    const marginPerHand = calcMarginPerHand(pos.unitPrice, pos.marginRate, pos.multiplier);
+                    accMargin += calcMargin(marginPerHand, pos.lots);
+                    accPnL += calcPnL(pos.direction, pos.openPrice, pos.currentPrice, pos.multiplier, pos.lots);
+                });
+                const accRatio = calcRatio(accMargin, acc.equity);
+                grandEquity += acc.equity;
+                grandMargin += accMargin;
+                grandPnL += accPnL;
+
+                data.push([
+                    acc.name,
+                    acc.equity,
+                    accMargin.toFixed(2),
+                    accRatio.toFixed(4),
+                    accPnL.toFixed(2),
+                    acc.positions.length,
+                    acc.plans.length
+                ]);
+            });
+
+            data.push([]);
+            data.push(['汇总', grandEquity, grandMargin.toFixed(2), calcRatio(grandMargin, grandEquity).toFixed(4), grandPnL.toFixed(2), '', '']);
+
+            const ws = XLSX.utils.aoa_to_sheet(data);
+            ws['!cols'] = [{wch: 16}, {wch: 14}, {wch: 14}, {wch: 14}, {wch: 14}, {wch: 12}, {wch: 12}];
+            ws['!merges'] = [{s: {r: 0, c: 0}, e: {r: 0, c: 6}}];
+
+            XLSX.utils.book_append_sheet(wb, ws, sheetName);
+        }
+
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            toast.textContent = msg;
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 2000);
+        }
+
+        function showSyncStatus(type, msg) {
+            const el = document.getElementById('syncStatus');
+            el.textContent = msg;
+            el.className = 'sync-status show ' + type;
+            if (type === 'synced') setTimeout(() => el.classList.remove('show'), 2000);
+        }
+
+        document.getElementById('totalEquity').addEventListener('change', async function() {
+            const acc = getCurrentAccount();
+            if (acc) {
+                const oldEquity = acc.equity;
+                acc.equity = parseFloat(this.value) || 0;
+                addRecord(acc.id, acc.name, 'edit', '修改权益', `修改账户权益`, `¥${oldEquity}`, `¥${acc.equity}`);
+                await saveToServer();
+                renderPositions();
+            }
+        });
+
+        document.getElementById('planTotalEquity').addEventListener('change', async function() {
+            const acc = getCurrentAccount();
+            if (acc) {
+                acc.equity = parseFloat(this.value) || 0;
+                document.getElementById('totalEquity').value = acc.equity;
+                await saveToServer();
+                renderPlans();
+            }
+        });
+
+        function renderAll() {
+            renderAccountSelector();
+            renderPositions();
+            renderPlans();
+            renderRecords();
+        }
+
+        setInterval(async () => {
+            if (document.visibilityState === 'visible') await loadData();
+        }, 5000);
+
+        loadData();
+    </script>
+</body>
+</html>
