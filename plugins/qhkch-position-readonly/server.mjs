@@ -192,7 +192,7 @@ export async function getContractPosition(rawCode) {
   };
 }
 
-const TOOL = {
+export const TOOL = {
   name: "get_contract_position",
   description: "Directly read and verify one exact futures contract's QHKCH position page. Returns update status, trading date, top-20 long/short totals and changes, net position, full rankings, and core seats. Read-only; never uses search engines.",
   inputSchema: {
@@ -210,7 +210,7 @@ function send(message) {
   process.stdout.write(`${JSON.stringify(message)}\n`);
 }
 
-async function handle(request) {
+export async function handle(request) {
   if (request.method === "initialize") return { protocolVersion: "2025-03-26", capabilities: { tools: { listChanged: false } }, serverInfo: { name: "qhkch-position-readonly", version: "0.1.0" } };
   if (request.method === "ping") return {};
   if (request.method === "tools/list") return { tools: [TOOL] };

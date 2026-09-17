@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: qhkch-position-readonly
+    runtime: node
+    plan: free
+    rootDir: plugins/qhkch-position-readonly
+    buildCommand: ""
+    startCommand: node http-server.mjs
+    healthCheckPath: /health
+    autoDeploy: true

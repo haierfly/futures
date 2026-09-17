@@ -20,3 +20,19 @@
 ```bash
 node plugins/qhkch-position-readonly/test.mjs
 ```
+
+## 远程 HTTPS MCP
+
+服务端入口：
+
+- 健康检查：`GET /health`
+- Streamable HTTP MCP：`POST /mcp`
+
+本地验证：
+
+```bash
+cd plugins/qhkch-position-readonly
+npm start
+```
+
+部署后在 ChatGPT Developer Mode 中填写 `https://你的域名/mcp`。服务无账户、密码、下单或写入接口。
