@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "qhkch-position-readonly": {
+      "command": "node",
+      "args": ["${CLAUDE_PLUGIN_ROOT}/server.mjs"]
+    }
+  }
+}
