@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 import path from "node:path";
 
 const root = path.dirname(fileURLToPath(import.meta.url));
-const child = spawn(process.execPath, [path.join(root, "server.mjs")], { stdio: ["pipe", "pipe", "inherit"] });
+const child = spawn(process.execPath, [path.join(root, "stdio-server.mjs")], { stdio: ["pipe", "pipe", "inherit"] });
 let nextId = 1;
 const waiting = new Map();
 let buffer = "";

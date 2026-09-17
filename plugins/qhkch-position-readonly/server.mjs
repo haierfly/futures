@@ -1,10 +1,6 @@
-#!/usr/bin/env node
-
-import readline from "node:readline";
-
 const BASE_URL = "https://x.qhkch.com/variety/position";
 const USER_AGENT = "qhkch-position-readonly/0.1 (+https://github.com/haierfly/futures)";
-const TIMEOUT_MS = Number(process.env.QHKCH_TIMEOUT_MS || 20000);
+const TIMEOUT_MS = Number(globalThis.process?.env?.QHKCH_TIMEOUT_MS || 20000);
 
 const VARIETIES = {
   a: "豆一", ag: "白银", al: "铝", ao: "氧化铝", ap: "苹果", au: "黄金",
@@ -206,10 +202,6 @@ export const TOOL = {
   }
 };
 
-function send(message) {
-  process.stdout.write(`${JSON.stringify(message)}\n`);
-}
-
 export async function handle(request) {
   if (request.method === "initialize") return { protocolVersion: "2025-03-26", capabilities: { tools: { listChanged: false } }, serverInfo: { name: "qhkch-position-readonly", version: "0.1.0" } };
   if (request.method === "ping") return {};
@@ -221,19 +213,4 @@ export async function handle(request) {
   }
   if (String(request.method || "").startsWith("notifications/")) return null;
   throw new Error(`Method not found: ${request.method}`);
-}
-
-if (process.argv[1] && import.meta.url === new URL(`file://${process.argv[1]}`).href) {
-  const rl = readline.createInterface({ input: process.stdin, crlfDelay: Infinity });
-  rl.on("line", async line => {
-    if (!line.trim()) return;
-    let request;
-    try {
-      request = JSON.parse(line);
-      const result = await handle(request);
-      if (request.id !== undefined && result !== null) send({ jsonrpc: "2.0", id: request.id, result });
-    } catch (error) {
-      if (request?.id !== undefined) send({ jsonrpc: "2.0", id: request.id, error: { code: -32603, message: error instanceof Error ? error.message : String(error) } });
-    }
-  });
 }

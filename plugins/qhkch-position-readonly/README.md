@@ -36,3 +36,14 @@ npm start
 ```
 
 部署后在 ChatGPT Developer Mode 中填写 `https://你的域名/mcp`。服务无账户、密码、下单或写入接口。
+
+## Cloudflare Workers
+
+仓库已包含 Workers 原生入口 `worker.mjs` 和 `wrangler.toml`：
+
+```bash
+cd plugins/qhkch-position-readonly
+npm run deploy:cloudflare
+```
+
+发布后使用 `https://qhkch-position-readonly.<你的 workers.dev 子域>/mcp`。
