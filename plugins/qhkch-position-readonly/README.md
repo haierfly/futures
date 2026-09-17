@@ -46,4 +46,6 @@ cd plugins/qhkch-position-readonly
 npm run deploy:cloudflare
 ```
 
-发布后使用 `https://qhkch-position-readonly.<你的 workers.dev 子域>/mcp`。
+当前生产端点：`https://qhkch-position-readonly.157626059.workers.dev/mcp`。
+
+插件的 `.mcp.json` 已直接注册该远程 Streamable HTTP 端点；安装或更新插件后，新会话会从线上 `tools/list` 发现 `get_contract_position`。
