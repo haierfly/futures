@@ -203,6 +203,20 @@ export const TOOL = {
 };
 
 export async function handle(request) {
+  if (request.method === "server/discover") return {
+    resultType: "complete",
+    supportedVersions: ["2026-07-28", "2025-03-26"],
+    capabilities: { tools: {} },
+    _meta: {
+      "io.modelcontextprotocol/serverInfo": {
+        name: "qhkch-position-readonly",
+        version: "0.1.1"
+      }
+    },
+    instructions: "Use get_contract_position with an exact futures contract code such as jm2701 or jm2705. This server is read-only.",
+    ttlMs: 3600000,
+    cacheScope: "public"
+  };
   if (request.method === "initialize") return { protocolVersion: "2025-03-26", capabilities: { tools: { listChanged: false } }, serverInfo: { name: "qhkch-position-readonly", version: "0.1.0" } };
   if (request.method === "ping") return {};
   if (request.method === "tools/list") return { tools: [TOOL] };
@@ -214,3 +228,4 @@ export async function handle(request) {
   if (String(request.method || "").startsWith("notifications/")) return null;
   throw new Error(`Method not found: ${request.method}`);
 }
+
