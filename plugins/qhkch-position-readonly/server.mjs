@@ -239,8 +239,12 @@ export async function handle(request) {
   if (request.method === "tools/list") return { tools: [TOOL] };
   if (request.method === "tools/call") {
     if (request.params?.name !== TOOL.name) throw new Error(`Unknown tool: ${request.params?.name}`);
-    const data = await getContractPosition(request.params?.arguments?.code, request.params?.arguments?.date);
-    return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }], structuredContent: data };
+    try {
+      const data = await getContractPosition(request.params?.arguments?.code, request.params?.arguments?.date);
+      return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }], structuredContent: data };
+    } catch (error) {
+      return { isError: true, content: [{ type: "text", text: error instanceof Error ? error.message : String(error) }] };
+    }
   }
   if (String(request.method || "").startsWith("notifications/")) return null;
   throw new Error(`Method not found: ${request.method}`);
