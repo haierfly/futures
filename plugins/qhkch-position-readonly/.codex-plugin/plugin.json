@@ -1,6 +1,6 @@
 {
   "name": "qhkch-position-readonly",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "Read exact-contract futures position rankings directly from QHKCH without search engines.",
   "author": {
     "name": "haierfly"
@@ -9,15 +9,16 @@
   "repository": "https://github.com/haierfly/futures",
   "interface": {
     "displayName": "奇货可查只读持仓",
-    "shortDescription": "按具体合约代码读取多空龙虎榜与前20持仓。",
-    "longDescription": "直接访问奇货可查具体合约页面，核验合约、交易日和更新状态，并返回多空龙虎榜、前20合计、净持仓及核心席位。只读，不包含账户与交易能力。",
+    "shortDescription": "按具体合约与可选历史日期读取龙虎榜及前20持仓。",
+    "longDescription": "直接访问奇货可查具体合约页面，支持最新或指定历史交易日，核验合约、日期和更新状态，并返回多空龙虎榜、前20合计、净持仓及核心席位。只读，不包含账户与交易能力。",
     "developerName": "haierfly",
     "category": "Finance",
     "capabilities": ["Read", "Remote MCP"],
     "defaultPrompt": [
       "读取 l2611 的最新机构持仓。",
-      "核验 jm2701 与 jm2705 的龙虎榜。"
+      "读取 jm2701 在 2026-09-16 的历史机构持仓。"
     ]
   },
   "mcpServers": "./.mcp.json"
 }
+
