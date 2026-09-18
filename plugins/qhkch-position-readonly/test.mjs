@@ -33,6 +33,7 @@ try {
   const listed = await request("tools/list");
   assert.deepEqual(listed.tools.map(t => t.name), ["get_contract_position"]);
   assert.deepEqual(listed.tools[0].inputSchema.required, ["code"]);
+  assert.ok(listed.tools[0].inputSchema.properties.date);
 
   const reports = [];
   for (const code of ["l2611", "v2611", "jm2701", "jm2705"]) {
@@ -41,6 +42,7 @@ try {
     assert.equal(data.code, code);
     assert.equal(data.verification.contract_match, true);
     assert.equal(data.verification.date_verified, true);
+    assert.equal(data.verification.requested_date_match, true);
     assert.equal(data.verification.long_table_verified, true);
     assert.equal(data.verification.short_table_verified, true);
     assert.equal(data.verification.search_engine_used, false);
@@ -50,7 +52,15 @@ try {
     assert.ok(data.core_seats.length > 0);
     reports.push({ code: data.code, contract: data.contract, trading_date: data.trading_date, position_status: data.position_status, long_total: data.top20_long.total, long_change: data.top20_long.change, short_total: data.top20_short.total, short_change: data.top20_short.change, net: data.top20_net, core_seats: data.core_seats.slice(0, 5) });
   }
+  const historical = (await request("tools/call", { name: "get_contract_position", arguments: { code: "jm2701", date: "2026-09-16" } })).structuredContent;
+  assert.equal(historical.requested_date, "2026-09-16");
+  assert.equal(historical.trading_date, "2026-09-16");
+  assert.equal(historical.verification.requested_date_match, true);
+  assert.equal(historical.long_ranking.length, 20);
+  assert.equal(historical.short_ranking.length, 20);
+  reports.push({ code: historical.code, requested_date: historical.requested_date, trading_date: historical.trading_date, long_total: historical.top20_long.total, short_total: historical.top20_short.total, net: historical.top20_net });
   console.log(JSON.stringify({ schema_tool_count: listed.tools.length, tool: listed.tools[0], acceptance: reports }, null, 2));
 } finally {
   child.kill();
 }
+
