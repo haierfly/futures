@@ -132,6 +132,15 @@ function normalizeCode(raw) {
   return { code, prefix, variety };
 }
 
+function normalizeDate(raw) {
+  if (raw === undefined || raw === null || String(raw).trim() === "") return null;
+  const date = String(raw).trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) throw new Error("date must use YYYY-MM-DD format");
+  const parsed = new Date(`${date}T00:00:00Z`);
+  if (Number.isNaN(parsed.getTime()) || parsed.toISOString().slice(0, 10) !== date) throw new Error("date must be a valid calendar date");
+  return date;
+}
+
 async function fetchHtml(url) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
@@ -144,11 +153,13 @@ async function fetchHtml(url) {
   }
 }
 
-export async function getContractPosition(rawCode) {
+export async function getContractPosition(rawCode, rawDate) {
   const { code, variety } = normalizeCode(rawCode);
+  const requestedDate = normalizeDate(rawDate);
   const url = new URL(BASE_URL);
   url.searchParams.set("code", code);
   url.searchParams.set("variety", variety);
+  if (requestedDate) url.searchParams.set("date", requestedDate);
   const html = await fetchHtml(url);
   const selected = html.match(/<option\b[^>]*value=["']([^"']+)["'][^>]*selected[^>]*>([\s\S]*?)<\/option>/i);
   const selectedCode = selected?.[1]?.toLowerCase() ?? null;
@@ -159,13 +170,17 @@ export async function getContractPosition(rawCode) {
   const short = parseRanking(html, "short");
   const contractMatch = selectedCode === code && long.title.includes(contract) && short.title.includes(contract);
   if (!contractMatch) throw new Error(`Contract verification failed: requested ${code}, page selected ${selectedCode || "unknown"}`);
-  if (long.rows.length !== 20 || short.rows.length !== 20) throw new Error(`Ranking completeness failed: long=${long.rows.length}, short=${short.rows.length}`);
+  if (requestedDate && tradingDate !== requestedDate) throw new Error(`Date verification failed: requested ${requestedDate}, page returned ${tradingDate || "unknown"}`);
+  if (long.rows.length !== 20 || short.rows.length !== 20) {
+    throw new Error(`No complete position ranking data for ${code} on ${tradingDate || requestedDate || "latest"}: long=${long.rows.length}, short=${short.rows.length}`);
+  }
   const top20Net = long.total - short.total;
   return {
     source: "奇货可查",
     source_url: url.toString(),
     code,
     contract,
+    requested_date: requestedDate,
     trading_date: tradingDate,
     position_status: status,
     position_updated: status === "持仓已更新",
@@ -178,6 +193,7 @@ export async function getContractPosition(rawCode) {
     core_seats: coreSeats(long.rows, short.rows),
     verification: {
       contract_match: contractMatch,
+      requested_date_match: requestedDate === null || tradingDate === requestedDate,
       date_verified: /^\d{4}-\d{2}-\d{2}$/.test(tradingDate || ""),
       update_status_verified: ["持仓已更新", "持仓未更新", "无持仓数据"].includes(status),
       long_table_verified: long.rows.length === 20,
@@ -190,12 +206,13 @@ export async function getContractPosition(rawCode) {
 
 export const TOOL = {
   name: "get_contract_position",
-  description: "Directly read and verify one exact futures contract's QHKCH position page. Returns update status, trading date, top-20 long/short totals and changes, net position, full rankings, and core seats. Read-only; never uses search engines.",
+  description: "Directly read and verify one exact futures contract's QHKCH position page for the latest or a specified historical trading date. Returns update status, trading date, top-20 long/short totals and changes, net position, full rankings, and core seats. Read-only; never uses search engines.",
   inputSchema: {
     $schema: "http://json-schema.org/draft-07/schema#",
     type: "object",
     properties: {
-      code: { type: "string", pattern: "^[A-Za-z]{1,3}[0-9]{3,4}$", description: "Exact contract code such as l2611, v2611, jm2701 or jm2705" }
+      code: { type: "string", pattern: "^[A-Za-z]{1,3}[0-9]{3,4}$", description: "Exact contract code such as l2611, v2611, jm2701 or jm2705" },
+      date: { type: "string", pattern: "^\\d{4}-\\d{2}-\\d{2}$", description: "Optional historical trading date in YYYY-MM-DD format. Omit for the latest available data." }
     },
     required: ["code"],
     additionalProperties: false
@@ -210,7 +227,7 @@ export async function handle(request) {
     _meta: {
       "io.modelcontextprotocol/serverInfo": {
         name: "qhkch-position-readonly",
-        version: "0.1.1"
+        version: "0.2.0"
       }
     },
     instructions: "Use get_contract_position with an exact futures contract code such as jm2701 or jm2705. This server is read-only.",
@@ -222,7 +239,7 @@ export async function handle(request) {
   if (request.method === "tools/list") return { tools: [TOOL] };
   if (request.method === "tools/call") {
     if (request.params?.name !== TOOL.name) throw new Error(`Unknown tool: ${request.params?.name}`);
-    const data = await getContractPosition(request.params?.arguments?.code);
+    const data = await getContractPosition(request.params?.arguments?.code, request.params?.arguments?.date);
     return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }], structuredContent: data };
   }
   if (String(request.method || "").startsWith("notifications/")) return null;
