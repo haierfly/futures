@@ -4,7 +4,10 @@
 
 ## 工具
 
-`get_contract_position(code)` 返回：
+`get_contract_position(code, date?)` 返回最新或指定历史交易日的数据：
+
+- `code`：必填，具体合约代码，例如 `jm2701`
+- `date`：可选，`YYYY-MM-DD`；省略时读取最新可用数据
 
 - 目标合约、交易日与持仓更新状态
 - 前20多头/空头合计及日增减仓
@@ -12,6 +15,8 @@
 - 完整多头、空头龙虎榜
 - 按绝对净持仓排序的核心席位
 - 合约、日期、表格和合计校验结果
+
+示例：`get_contract_position(code="jm2701", date="2026-09-16")`。
 
 服务只有 HTTP GET 读取能力，不含账户、登录、下单或写入操作。
 
@@ -49,3 +54,4 @@ npm run deploy:cloudflare
 当前生产端点：`https://qhkch-position-readonly.157626059.workers.dev/mcp`。
 
 插件的 `.mcp.json` 已直接注册该远程 Streamable HTTP 端点；安装或更新插件后，新会话会从线上 `tools/list` 发现 `get_contract_position`。
+
